@@ -99,6 +99,7 @@ class IndexResource(restful.Resource):
 
 api.add_resource(IndexResource, '/index/<string:index>')
 
+# args: threshold, limit
 class DocumentSimilarityResource(restful.Resource):
     def get(self, index):
         json = request.json
@@ -108,9 +109,18 @@ class DocumentSimilarityResource(restful.Resource):
         ss = simservers[index]
         text = json['text'].strip()
         tokens = tokenize(text)
-        res = ss.find_similar({'tokens': tokens})
-        print res
-        return {}
+        res_list = ss.find_similar({'tokens': tokens}, max_results=10)
+        id_list = [x[0] for x in res_list]
+        docs = SemsiDocument.objects.filter(id__in=id_list)
+        doc_dict = {}
+        for doc in docs:
+            doc_dict[doc.id] = doc
+        doc_list = []
+        for r in res_list:
+            doc = doc_dict[r[0]]
+            d = {'id': doc.id, 'title': doc.title, 'summary': doc.text[0:200], 'relevance': r[1]}
+            doc_list.append(d)
+        return doc_list
 
 api.add_resource(DocumentSimilarityResource, '/index/<string:index>/similar')
 
