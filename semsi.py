@@ -53,7 +53,7 @@ def make_corpus(doc):
 class DocumentResource(restful.Resource):
     def post(self):
         json = request.json
-        check_fields(('text', 'id', 'title'), json)
+        check_fields(('text', 'id', 'title', 'index'), json)
         created = False
         try:
             doc = SemsiDocument.objects.get(id=json['id'])
@@ -107,6 +107,8 @@ class DocumentSimilarityResource(restful.Resource):
         if not index in INDEXES:
             abort(404, message="Index '%s' not found" % index)
         ss = simservers[index]
+        if not ss.stable.fresh_index:
+            abort(404, message="Index '%s' empty" % index)
         text = json['text'].strip()
         tokens = tokenize(text)
         res_list = ss.find_similar({'tokens': tokens}, max_results=10)
