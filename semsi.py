@@ -55,10 +55,11 @@ class DocumentResource(restful.Resource):
         json = request.json
         check_fields(('text', 'id', 'title', 'index'), json)
         created = False
+        doc_id = unicode(json['id'])
         try:
-            doc = SemsiDocument.objects.get(id=json['id'])
+            doc = SemsiDocument.objects.get(id=doc_id)
         except SemsiDocument.DoesNotExist:
-            doc = SemsiDocument(id=json['id'])
+            doc = SemsiDocument(id=doc_id)
             created = True
         doc.text = json['text']
         doc.title = json['title']
@@ -80,15 +81,26 @@ class IndexResource(restful.Resource):
         json = request.json
         if not index in INDEXES:
             abort(404, message="Index '%s' not found" % index)
+        train = json.get('train', False)
+
         ss = simservers[index]
         corpus = []
         docs = SemsiDocument.objects.filter(index=index)
+        # If it's an indexing operation, we choose only the non-indexed docs.
+        if not train:
+            docs = docs.filter(indexed=False)
         print "generating corpus for %d docs" % docs.count()
         for idx, doc in enumerate(docs):
             corpus.append(make_corpus(doc))
-        print "corpus generated for %s, training" % index
-        ss.train(corpus, method='lsi')
-        return {'message': 'trained with %d documents' % len(corpus)}
+        if train:
+            ss.train(corpus, method='lsi')
+            action = "training"
+        else:
+            ss.index(corpus)
+            docs.update(set__indexed=True)
+            action = "indexing"
+        return {'message': '%s completed with %d documents' % (action, len(corpus))}
+
     def delete(self, index):
         if not index in INDEXES:
             abort(404, message="Index '%s' not found" % index)
