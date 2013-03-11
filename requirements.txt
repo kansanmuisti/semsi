@@ -1,2 +1,5 @@
 Flask
+Flask-RESTful
 requests
+mongoengine
+simserver

@@ -13,7 +13,7 @@ def string_to_words(s):
     words = s.split()
     return words
 
-class Stemmer(object):
+class StemmerOld(object):
     FI_PROJECT = 'sukija/suomi.pro'
     FI_TRANSFORMS = {
         u'kuu': ([u'kuu', u'kuin'], [u'kuin']),
@@ -24,7 +24,7 @@ class Stemmer(object):
         u'paljo': ([u'paljo'], [u'paljon']),
     }
 
-        # We support only Finnish for now
+    # We support only Finnish for now
     def __init__(self, language):
         assert language == "fi"
 
@@ -61,7 +61,7 @@ class Stemmer(object):
             result = self.lib.next_analysis_result()
         self.lock.release()
 
-	if flat:
+        if flat:
             ret = list(set(ret))
             if len(ret) > 0:
                 trans = self.FI_TRANSFORMS.get(ret[0])
@@ -80,3 +80,36 @@ class Stemmer(object):
                 print words[idx]"""
         return ret
 
+
+class Stemmer(object):
+    FI_PROJECT = 'sukija/suomi.pro'
+    SO_NAME = 'stemlib.so'
+
+    def __init__(self, language):
+        # We support only Finnish for now
+        assert language == "fi"
+
+        self.libc = ctypes.CDLL(None)
+        my_path = os.path.dirname(os.path.abspath(__file__))
+        self.lib = ctypes.CDLL(os.path.join(my_path, self.SO_NAME))
+        self.lib.stem_init(os.path.join(my_path, self.FI_PROJECT))
+        self.lib.stem_word.restype = ctypes.c_void_p
+        self.lock = threading.Lock()
+
+    def convert_word(self, word):
+        we = word.encode('utf8')
+        st = ctypes.c_char_p(we)
+        self.lock.acquire()
+        out = self.lib.stem_word(st)
+        res = ctypes.c_char_p(out)
+        self.lock.release()
+        if not res.value:
+            return unicode(word)
+        stemmed = unicode(res.value.decode('utf8'))
+        self.libc.free(res)
+        return stemmed
+
+    def convert_string(self, s):
+        words = string_to_words(s)
+        ret = map(self.convert_word, words)
+        return ret

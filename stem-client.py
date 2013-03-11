@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import requests
+import json
 
-SERVER = "http://localhost:8000/v1"
-STEM_PATH = "/stem"
+SERVER = "http://localhost:5000"
+#SERVER = "http://semsi.kansanmuisti.fi/v1"
+STEM_PATH = "/index/kamu/similar"
 
 f = open('stem-client-data.txt')
 s = f.read()
@@ -15,6 +17,7 @@ url = "%s%s" % (SERVER, STEM_PATH)
 #print r
 #print r.text
 
-r = requests.post(url, data=params)
+headers = {'Content-type': 'application/json'}
+r = requests.get(url, data=json.dumps(params), headers=headers)
 print r
 print r.text
