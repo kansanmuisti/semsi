@@ -1,7 +1,7 @@
 from flask import Blueprint, Flask, Response, request, jsonify, make_response
 from flask.ext import restful
 from flask.ext.restful import fields, reqparse, abort
-from mongoengine import connect
+from mongoengine import connect, ValidationError
 from simserver import SessionServer
 from gensim import utils
 from lexicon.stemming import Stemmer
@@ -67,7 +67,11 @@ class DocumentResource(restful.Resource):
         if not json['index'] in INDEXES:
             abort(404, message="Index '%s' not found" % json['index'])
         doc.index = json['index']
-        doc.save()
+        try:
+            doc.save()
+        except ValidationError:
+            abort(400, message="Invalid fields supplied")
+
         if 'train' in json and not doc.indexed:
             ss = simservers[json['index']]
             ss.index([make_corpus(doc)])
