@@ -4,6 +4,7 @@ class SemsiDocument(Document):
     id = StringField(unique=True, primary_key=True)
     title = StringField(required=True)
     text = StringField(required=True)
+    url = URLField(required=True)
 
     index = StringField(required=True)
     indexed = BooleanField(default=False)

@@ -53,7 +53,7 @@ def make_corpus(doc):
 class DocumentResource(restful.Resource):
     def post(self):
         json = request.json
-        check_fields(('text', 'id', 'title', 'index'), json)
+        check_fields(('text', 'id', 'title', 'url', 'index'), json)
         created = False
         doc_id = unicode(json['id'])
         try:
@@ -63,6 +63,7 @@ class DocumentResource(restful.Resource):
             created = True
         doc.text = json['text']
         doc.title = json['title']
+        doc.url = json['url']
         if not json['index'] in INDEXES:
             abort(404, message="Index '%s' not found" % json['index'])
         doc.index = json['index']
@@ -73,7 +74,7 @@ class DocumentResource(restful.Resource):
             doc.indexed = True
             doc.save()
         return {'created': created}, 200
-        
+
 api.add_resource(DocumentResource, '/doc')
 
 class IndexResource(restful.Resource):
@@ -89,7 +90,7 @@ class IndexResource(restful.Resource):
         # If it's an indexing operation, we choose only the non-indexed docs.
         if not train:
             docs = docs.filter(indexed=False)
-        print "generating corpus for %d docs" % docs.count()
+
         for idx, doc in enumerate(docs):
             corpus.append(make_corpus(doc))
         if train:
