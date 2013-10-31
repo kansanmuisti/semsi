@@ -6,6 +6,7 @@ from simserver import SessionServer
 from gensim import utils
 from lexicon.stemming import Stemmer
 from models import SemsiDocument
+from cors import cors
 
 MAX_DOCUMENT_LENGTH = 200000
 
@@ -118,6 +119,7 @@ api.add_resource(IndexResource, '/index/<string:index>')
 
 # args: threshold, limit
 class DocumentSimilarityResource(restful.Resource):
+    @cors
     def get(self, index):
         json = request.json
         check_fields(('text',), json)
