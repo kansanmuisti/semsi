@@ -17,6 +17,7 @@ stemmer = Stemmer(language="fi")
 CORS_HEADERS = [
     ("Access-Control-Allow-Origin", "*"),
     ("Access-Control-Allow-Methods", ', '.join(["GET", "POST", "DELETE", "OPTIONS"])),
+    ("Access-Control-Allow-Headers", ', '.join(["Content-Type"])),
 ]
 
 def add_cors_headers(resp):
@@ -134,6 +135,9 @@ api.add_resource(IndexResource, '/index/<string:index>')
 
 # args: threshold, limit
 class DocumentSimilarityResource(restful.Resource):
+    def options(self, index):
+        return {}
+
     def get(self, index):
         json = request.json
         check_fields(('text',), json)
