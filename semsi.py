@@ -142,16 +142,22 @@ class DocumentSimilarityResource(restful.Resource):
         return self.get(index)
 
     def get(self, index):
-        json = request.json
-        check_fields(('text',), json)
+        args = request.args
         if not index in INDEXES:
             abort(404, message="Index '%s' not found" % index)
         ss = simservers[index]
         if not ss.stable.fresh_index:
             abort(404, message="Index '%s' empty" % index)
-        text = json['text'].strip()
-        tokens = tokenize(text)
-        res_list = ss.find_similar({'tokens': tokens}, max_results=10)
+        if 'text' in args:
+            text = args['text'].strip()
+            tokens = tokenize(text)
+            doc = {'tokens': tokens}
+        elif 'id' in args:
+            doc = args['id'].strip()
+        else:
+            abort(400, message="Must supply either 'text' or 'id'")
+
+        res_list = ss.find_similar(doc, max_results=10)
         id_list = [x[0] for x in res_list]
         docs = SemsiDocument.objects.filter(id__in=id_list)
         doc_dict = {}
