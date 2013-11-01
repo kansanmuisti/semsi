@@ -138,6 +138,9 @@ class DocumentSimilarityResource(restful.Resource):
     def options(self, index):
         return {}
 
+    def post(self, index):
+        return self.get(index)
+
     def get(self, index):
         json = request.json
         check_fields(('text',), json)
