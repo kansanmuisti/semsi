@@ -153,20 +153,32 @@ class DocumentSimilarityResource(restful.Resource):
             tokens = tokenize(text)
             doc = {'tokens': tokens}
         elif 'id' in args:
-            doc = args['id'].strip()
+            doc_id = args['id'].strip()
+            try:
+                doc = SemsiDocument.objects.get(id=doc_id)
+            except SemsiDocument.DoesNotExist:
+                abort(404, message="Doc with id '%s' not found" % doc_id)
+            if not doc.indexed:
+                abort(404, message="Doc '%s' not indexed" % doc_id)
+            doc = doc_id
         else:
             abort(400, message="Must supply either 'text' or 'id'")
 
-        res_list = ss.find_similar(doc, max_results=10)
-        id_list = [x[0] for x in res_list]
+        res_list = ss.find_similar(doc, max_results=11)
+        id_list = [x[0] for x in res_list if x != doc_id]
         docs = SemsiDocument.objects.filter(id__in=id_list)
         doc_dict = {}
         for doc in docs:
             doc_dict[doc.id] = doc
         doc_list = []
+
+        no_summary = request.args.get('no_summary', '').lower() in ('true', '1')
         for r in res_list:
             doc = doc_dict[r[0]]
-            d = {'id': doc.id, 'title': doc.title, 'summary': doc.text[0:200], 'relevance': r[1]}
+            d = {'id': doc.id, 'relevance': r[1]}
+            if not no_summary:
+                d['title'] = doc.title
+                d['summary'] = doc.text[0:200]
             doc_list.append(d)
         return doc_list
 
