@@ -26,11 +26,6 @@ def add_cors_headers(resp):
     return resp
 app.after_request(add_cors_headers)
 
-class CorsMixin(object):
-    def get_headers(self, environ=None):
-        hdrs = super(self, SemsiBadRequest).get_headers(environ)
-        return hdrs + CORS_HEADERS
-
 def tokenize(s):
     return stemmer.convert_string(s)
 
@@ -67,10 +62,16 @@ def make_corpus(doc):
     ret = {'id': doc.id, 'tokens': tokenize(doc.text)}
     return ret
 
+def get_index(index_id):
+    if not index_id in INDEXES:
+        abort(404, message="Index '%s' not found" % index_id)
+    return index_id
+
 class DocumentResource(restful.Resource):
-    def post(self):
+    def post(self, index):
         json = request.json
-        check_fields(('text', 'id', 'title', 'url', 'index'), json)
+        index = get_index(index)
+        check_fields(('text', 'id', 'title', 'url'), json)
         created = False
         doc_id = unicode(json['id'])
         try:
@@ -81,28 +82,28 @@ class DocumentResource(restful.Resource):
         doc.text = json['text']
         doc.title = json['title']
         doc.url = json['url']
-        if not json['index'] in INDEXES:
-            abort(404, message="Index '%s' not found" % json['index'])
-        doc.index = json['index']
+        doc.indexed = False
+        doc.index = index
         try:
             doc.save()
         except ValidationError:
             abort(400, message="Invalid fields supplied")
 
-        if 'train' in json and not doc.indexed:
-            ss = simservers[json['index']]
+        if 'index' in json and not doc.indexed:
+            ss = simservers[index]
             ss.index([make_corpus(doc)])
             doc.indexed = True
             doc.save()
         return {'created': created}, 200
 
-api.add_resource(DocumentResource, '/doc')
+api.add_resource(DocumentResource, '/index/<string:index>/doc')
 
 class IndexResource(restful.Resource):
     def post(self, index):
         json = request.json
-        if not index in INDEXES:
-            abort(404, message="Index '%s' not found" % index)
+        if not json:
+            json = {}
+        index = get_index(index)
         train = json.get('train', False)
 
         ss = simservers[index]
@@ -124,8 +125,7 @@ class IndexResource(restful.Resource):
         return {'message': '%s completed with %d documents' % (action, len(corpus))}
 
     def delete(self, index):
-        if not index in INDEXES:
-            abort(404, message="Index '%s' not found" % index)
+        index = get_index(index)
         ss = simservers[index]
         ss.drop_index()
         SemsiDocument.objects.filter(index=index).update(set__indexed=False)
@@ -143,8 +143,7 @@ class DocumentSimilarityResource(restful.Resource):
 
     def get(self, index):
         args = request.args
-        if not index in INDEXES:
-            abort(404, message="Index '%s' not found" % index)
+        index = get_index(index)
         ss = simservers[index]
         if not ss.stable.fresh_index:
             abort(404, message="Index '%s' empty" % index)
