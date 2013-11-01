@@ -6,7 +6,6 @@ from simserver import SessionServer
 from gensim import utils
 from lexicon.stemming import Stemmer
 from models import SemsiDocument
-from cors import cors
 
 MAX_DOCUMENT_LENGTH = 200000
 
@@ -14,6 +13,22 @@ app = Flask(__name__)
 api = restful.Api(app)
 
 stemmer = Stemmer(language="fi")
+
+CORS_HEADERS = [
+    ("Access-Control-Allow-Origin", "*"),
+    ("Access-Control-Allow-Methods", ', '.join(["GET", "POST", "DELETE", "OPTIONS"])),
+]
+
+def add_cors_headers(resp):
+    for hdr in CORS_HEADERS:
+        resp.headers.add_header(hdr[0], hdr[1])
+    return resp
+app.after_request(add_cors_headers)
+
+class CorsMixin(object):
+    def get_headers(self, environ=None):
+        hdrs = super(self, SemsiBadRequest).get_headers(environ)
+        return hdrs + CORS_HEADERS
 
 def tokenize(s):
     return stemmer.convert_string(s)
@@ -119,7 +134,6 @@ api.add_resource(IndexResource, '/index/<string:index>')
 
 # args: threshold, limit
 class DocumentSimilarityResource(restful.Resource):
-    @cors
     def get(self, index):
         json = request.json
         check_fields(('text',), json)
