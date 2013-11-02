@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, Flask, Response, request, jsonify, make_response
 from flask.ext import restful
 from flask.ext.restful import fields, reqparse, abort
@@ -6,6 +8,8 @@ from simserver import SessionServer
 from gensim import utils
 from lexicon.stemming import Stemmer
 from models import SemsiDocument
+
+from local_settings import *
 
 MAX_DOCUMENT_LENGTH = 200000
 
@@ -82,6 +86,7 @@ class DocumentResource(restful.Resource):
         doc.text = json['text']
         doc.title = json['title']
         doc.url = json['url']
+        doc.name = json.get('name', None)
         doc.indexed = False
         doc.index = index
         try:
@@ -170,11 +175,10 @@ class DocumentSimilarityResource(restful.Resource):
         for doc in docs:
             doc_dict[doc.id] = doc
         doc_list = []
-
         no_summary = request.args.get('no_summary', '').lower() in ('true', '1')
         for r in res_list:
             doc = doc_dict[r[0]]
-            d = {'id': doc.id, 'relevance': r[1]}
+            d = {'id': doc.id, 'relevance': r[1], 'name': doc.name}
             if not no_summary:
                 d['title'] = doc.title
                 d['summary'] = doc.text[0:200]
@@ -187,7 +191,7 @@ connect('semsi')
 
 simservers = {}
 for idx in INDEXES:
-    simservers[idx] = SessionServer('/tmp/%s_index' % idx)
+    simservers[idx] = SessionServer(os.path.join(INDEX_PATH, '%s_index' % idx))
 
 if __name__ == "__main__":
     app.run(debug=True)
