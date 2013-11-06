@@ -174,7 +174,7 @@ class DocumentSimilarityResource(restful.Resource):
             abort(400, message="Must supply either 'text' or 'id'")
 
         res_list = ss.find_similar(doc, max_results=11)
-        id_list = [x[0] for x in res_list if x != doc_id]
+        id_list = [x[0] for x in res_list]
         docs = SemsiDocument.objects.filter(id__in=id_list)
         doc_dict = {}
         for doc in docs:
