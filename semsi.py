@@ -183,7 +183,7 @@ class DocumentSimilarityResource(restful.Resource):
         no_summary = request.args.get('no_summary', '').lower() in ('true', '1')
         for r in res_list:
             doc = doc_dict[r[0]]
-            d = {'id': doc.id, 'relevance': r[1], 'name': doc.name}
+            d = {'id': doc.id, 'relevance': r[1], 'name': doc.name, 'url': doc.url}
             if not no_summary:
                 d['title'] = doc.title
                 d['summary'] = doc.text[0:200]
