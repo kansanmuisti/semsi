@@ -133,8 +133,13 @@ class IndexResource(restful.Resource):
         index = get_index(index)
         ss = simservers[index]
         ss.drop_index()
-        SemsiDocument.objects.filter(index=index).update(set__indexed=False)
-        return {'message': 'index %s deleted' % index}
+        msg = 'index %s deleted' % index
+        if request.args and request.args.get('docs', '').lower() in ('1', 'true'):
+            SemsiDocument.objects.filter(index=index).delete()
+            msg += ' and documents removed'
+        else:
+            SemsiDocument.objects.filter(index=index).update(set__indexed=False)
+        return {'message': msg}
 
 api.add_resource(IndexResource, '/index/<string:index>')
 
